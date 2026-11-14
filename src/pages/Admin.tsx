@@ -715,6 +715,7 @@ function Reports() {
 function AdminGate() {
   const status = useQuery(api.admin.status);
   const claim = useMutation(api.admin.claimAdmin);
+  const acceptInvite = useMutation(api.admin.acceptAdminInvite);
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
 
@@ -733,9 +734,12 @@ function AdminGate() {
           <Store className="mx-auto size-6 text-gold" />
           <h1 className="mt-4 text-3xl">Administrator access</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {status.canClaim
-              ? "No administrator exists yet. Claim this store with your signed-in email to open the dashboard."
-              : "This account does not have permission to open the dashboard. Sign in with the store's business email instead."}
+                        {status.invited
+              ? "You have been invited to manage this store. Accept the invitation to open the dashboard."
+              : status.canClaim
+                ? "No administrator exists yet. Claim this store with your signed-in email to open the dashboard."
+                : "This account does not have permission to open the dashboard. Ask an administrator to grant you access, then sign in with that email."
+            }
           </p>
           <p className="mt-3 border border-border/70 bg-secondary/40 px-3 py-2 text-[11px] text-muted-foreground">
             Signed in as {status.email ?? user?.email ?? "guest"}
@@ -756,6 +760,25 @@ function AdminGate() {
                 className="h-11 rounded-sm text-[10px] uppercase tracking-[0.16em]"
               >
                 Claim administrator access
+              </Button>
+            )}
+            {status.invited && (
+              <Button
+                onClick={async () => {
+                  try {
+                    await acceptInvite();
+                    toast.success("Administrator access granted.");
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "Could not accept invitation.",
+                    );
+                  }
+                }}
+                className="h-11 rounded-sm text-[10px] uppercase tracking-[0.16em]"
+              >
+                Accept administrator invitation
               </Button>
             )}
             <Button asChild variant="outline" className="h-11 rounded-sm text-[10px] uppercase tracking-[0.16em]">

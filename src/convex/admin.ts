@@ -1,7 +1,19 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import { BUSINESS_EMAIL, effectivePrice, getCurrentUser, requireAdmin } from "./lib";
+
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+async function findInvite(ctx: QueryCtx | MutationCtx, email: string) {
+  return await ctx.db
+    .query("adminInvites")
+    .withIndex("by_email", (q) => q.eq("email", normalizeEmail(email)))
+    .first();
+}
 
 export const status = query({
   args: {},
@@ -9,15 +21,37 @@ export const status = query({
     const user = await getCurrentUser(ctx);
     const users = await ctx.db.query("users").collect();
     const hasAdmin = users.some((row) => row.role === "admin");
+    const invite = user?.email ? await findInvite(ctx, user.email) : null;
     return {
       signedIn: Boolean(user),
       email: user?.email ?? null,
       name: user?.name ?? null,
       isAdmin: user?.role === "admin",
       canClaim: Boolean(user?.email) && !hasAdmin,
+      invited: Boolean(invite) && user?.role !== "admin",
       hasAdmin,
       businessEmail: BUSINESS_EMAIL,
     };
+  },
+});
+
+export const acceptAdminInvite = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user?.email) {
+      throw new Error("Sign in with the invited email address first.");
+    }
+    if (user.role === "admin") return null;
+    const invite = await findInvite(ctx, user.email);
+    if (!invite) {
+      throw new Error(
+        "No administrator invitation was found for this email. Ask the store owner to invite you again.",
+      );
+    }
+    await ctx.db.patch(user._id, { role: "admin" });
+    await ctx.db.delete(invite._id);
+    return null;
   },
 });
 
@@ -45,8 +79,11 @@ export const team = query({
   args: {},
   handler: async (ctx) => {
     const actor = await requireAdmin(ctx);
-    const users = await ctx.db.query("users").collect();
-    return users
+    const [users, invites] = await Promise.all([
+      ctx.db.query("users").collect(),
+      ctx.db.query("adminInvites").collect(),
+    ]);
+    const members = users
       .filter((user) => Boolean(user.email) && !user.isAnonymous)
       .map((user) => ({
         _id: user._id,
@@ -61,6 +98,61 @@ export const team = query({
         if (b.role === "admin" && a.role !== "admin") return 1;
         return a.email.localeCompare(b.email);
       });
+    return {
+      members,
+      invites: invites.sort((a, b) => b.createdAt - a.createdAt),
+    };
+  },
+});
+
+export const inviteAdmin = mutation({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx);
+    const email = normalizeEmail(args.email);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error("Enter a valid email address.");
+    }
+    if (actor.email && normalizeEmail(actor.email) === email) {
+      throw new Error("You already have administrator access.");
+    }
+
+    const users = await ctx.db.query("users").collect();
+    const target = users.find(
+      (user) =>
+        Boolean(user.email) &&
+        !user.isAnonymous &&
+        normalizeEmail(user.email ?? "") === email,
+    );
+
+    if (target) {
+      if (target.role !== "admin") {
+        await ctx.db.patch(target._id, { role: "admin" });
+      }
+      const staleInvite = await findInvite(ctx, email);
+      if (staleInvite) await ctx.db.delete(staleInvite._id);
+      return { promoted: true, email };
+    }
+
+    const existing = await findInvite(ctx, email);
+    if (!existing) {
+      await ctx.db.insert("adminInvites", {
+        email,
+        invitedBy: actor.email ?? undefined,
+        createdAt: Date.now(),
+      });
+    }
+    return { promoted: false, email };
+  },
+});
+
+export const revokeAdminInvite = mutation({
+  args: { inviteId: v.id("adminInvites") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const invite = await ctx.db.get(args.inviteId);
+    if (invite) await ctx.db.delete(invite._id);
+    return null;
   },
 });
 

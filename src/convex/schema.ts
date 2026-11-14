@@ -285,6 +285,12 @@ const schema = defineSchema(
       createdAt: v.number(),
     }).index("by_email", ["email"]),
 
+    adminInvites: defineTable({
+      email: v.string(),
+      invitedBy: v.optional(v.string()),
+      createdAt: v.number(),
+    }).index("by_email", ["email"]),
+
     inventoryLogs: defineTable({
       productId: v.id("products"),
       productName: v.string(),

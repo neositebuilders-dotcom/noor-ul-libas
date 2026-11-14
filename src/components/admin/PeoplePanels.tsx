@@ -884,15 +884,40 @@ export function SettingsPanel() {
 export function TeamPanel() {
   const team = useQuery(api.admin.team);
   const setAdminRole = useMutation(api.admin.setAdminRole);
+  const inviteAdmin = useMutation(api.admin.inviteAdmin);
+  const revokeInvite = useMutation(api.admin.revokeAdminInvite);
   const [search, setSearch] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   const query = search.trim().toLowerCase();
-  const members = (team ?? []).filter((member) =>
+  const members = (team?.members ?? []).filter((member) =>
     query
       ? `${member.name ?? ""} ${member.email}`.toLowerCase().includes(query)
       : true,
   );
+
+  const grant = async () => {
+    const email = inviteEmail.trim();
+    if (!email || inviting) return;
+    setInviting(true);
+    try {
+      const result = await inviteAdmin({ email });
+      setInviteEmail("");
+      toast.success(
+        result.promoted
+          ? "Administrator access granted. They can open /admin now."
+          : "Invitation saved. They become an admin after signing in with this email and accepting at /admin.",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not grant access.",
+      );
+    } finally {
+      setInviting(false);
+    }
+  };
 
   const toggle = async (userId: Id<"users">, makeAdmin: boolean) => {
     setBusy(userId);
@@ -916,9 +941,38 @@ export function TeamPanel() {
     <div className="space-y-5">
       <Panel
         title="Administrator access"
-        description="Promote a registered account to administrator. Admins can manage products, orders, homepage content and settings. The person must sign in once at /auth with the email you want to promote."
+        description="Give someone admin access by email. Existing accounts are promoted instantly; new emails are invited and become admin once they sign in with that address and accept the invitation at /admin."
       >
-        <div className="relative max-w-sm">
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <input
+            type="email"
+            value={inviteEmail}
+            onChange={(event) => setInviteEmail(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void grant();
+              }
+            }}
+            placeholder="teammate@example.com"
+            className="field h-9 text-xs"
+          />
+          <Button
+            type="button"
+            onClick={grant}
+            disabled={inviting || !inviteEmail.trim()}
+            className="h-9 gap-2 rounded-sm px-4 text-[10px] uppercase tracking-[0.14em]"
+          >
+            {inviting ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Plus className="size-3.5" />
+            )}
+            Grant admin access
+          </Button>
+        </div>
+
+        <div className="relative mt-4 max-w-sm">
           <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             value={search}
@@ -1007,8 +1061,8 @@ export function TeamPanel() {
                       colSpan={4}
                       className="py-8 text-center text-muted-foreground"
                     >
-                      {team.length === 0
-                        ? "No registered accounts yet. Ask your teammate to sign in at /auth first, then promote them here."
+                      {(team?.members.length ?? 0) === 0
+                        ? "No registered accounts yet. Grant access by email above."
                         : "No accounts match that search."}
                     </td>
                   </tr>
@@ -1017,9 +1071,65 @@ export function TeamPanel() {
             </table>
           </div>
         )}
+        {(team?.invites.length ?? 0) > 0 && (
+          <div className="mt-5 border border-dashed border-border p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Pending invitations
+            </p>
+            <ul className="mt-2 divide-y divide-border/50">
+              {(team?.invites ?? []).map((invite) => (
+                <li
+                  key={invite._id}
+                  className="flex flex-wrap items-center justify-between gap-2 py-2.5"
+                >
+                  <div>
+                    <p className="text-xs font-medium text-espresso">
+                      {invite.email}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Waiting for them to sign in at /auth and accept at /admin ·
+                      invited {formatDate(invite.createdAt)}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy === invite._id}
+                    onClick={async () => {
+                      setBusy(invite._id);
+                      try {
+                        await revokeInvite({ inviteId: invite._id });
+                        toast.success("Invitation cancelled.");
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Could not cancel invitation.",
+                        );
+                      } finally {
+                        setBusy(null);
+                      }
+                    }}
+                    className="h-7 rounded-sm px-2 text-[10px] uppercase tracking-[0.12em] text-muted-foreground hover:text-destructive"
+                  >
+                    {busy === invite._id ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <X className="size-3.5" />
+                    )}
+                    Cancel
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <p className="mt-4 text-[11px] leading-5 text-muted-foreground">
-          New admins sign in with their own email at <span className="text-espresso">/auth</span> and open{" "}
-          <span className="text-espresso">/admin</span>. You cannot change your own role — another admin must do it.
+          Invited admins sign in with that email at{" "}
+          <span className="text-espresso">/auth</span>, open{" "}
+          <span className="text-espresso">/admin</span> and accept the invitation. You cannot change your own role — another admin must do it.
         </p>
       </Panel>
     </div>
