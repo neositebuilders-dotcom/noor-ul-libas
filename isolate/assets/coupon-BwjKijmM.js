@@ -1,0 +1,1 @@
+const o="noor-coupon-v1";function e(){try{return window.localStorage.getItem(o)??""}catch{return""}}function n(t){try{t?window.localStorage.setItem(o,t):window.localStorage.removeItem(o)}catch{}}export{e as g,n as s};

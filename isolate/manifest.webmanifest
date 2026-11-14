@@ -1,0 +1,17 @@
+{
+  "name": "Noor ul Libas",
+  "short_name": "Noor ul Libas",
+  "description": "Pakistani women's clothing — unstitched and ready-to-wear lawn, cotton, chiffon and organza suits.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFCF8",
+  "theme_color": "#F8F0E5",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

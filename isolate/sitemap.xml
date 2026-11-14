@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>/</loc><priority>1.0</priority></url>
+  <url><loc>/shop</loc><priority>0.9</priority></url>
+  <url><loc>/new-arrivals</loc><priority>0.9</priority></url>
+  <url><loc>/best-sellers</loc><priority>0.8</priority></url>
+  <url><loc>/sale</loc><priority>0.8</priority></url>
+  <url><loc>/collections/featured</loc><priority>0.8</priority></url>
+  <url><loc>/collections/unstitched</loc><priority>0.8</priority></url>
+  <url><loc>/collections/ready-to-wear</loc><priority>0.8</priority></url>
+  <url><loc>/collections/two-piece</loc><priority>0.7</priority></url>
+  <url><loc>/collections/three-piece</loc><priority>0.7</priority></url>
+  <url><loc>/collections/lawn</loc><priority>0.7</priority></url>
+  <url><loc>/collections/chiffon</loc><priority>0.7</priority></url>
+  <url><loc>/collections/luxury</loc><priority>0.7</priority></url>
+  <url><loc>/collections/festive</loc><priority>0.7</priority></url>
+  <url><loc>/about</loc><priority>0.6</priority></url>
+  <url><loc>/contact</loc><priority>0.6</priority></url>
+  <url><loc>/faqs</loc><priority>0.5</priority></url>
+  <url><loc>/track-order</loc><priority>0.5</priority></url>
+  <url><loc>/shipping</loc><priority>0.4</priority></url>
+  <url><loc>/returns</loc><priority>0.4</priority></url>
+  <url><loc>/privacy</loc><priority>0.3</priority></url>
+  <url><loc>/terms</loc><priority>0.3</priority></url>
+</urlset>
