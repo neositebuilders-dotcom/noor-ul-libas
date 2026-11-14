@@ -121,7 +121,7 @@ export default function Checkout() {
         address: form.address,
         notes: form.notes || undefined,
         paymentMethod,
-        couponCode: validation?.valid ? applied : undefined,
+        couponCode: applied || undefined,
         items: cart.map((item) => ({
           productId: item.productId as Id<"products">,
           quantity: item.quantity,

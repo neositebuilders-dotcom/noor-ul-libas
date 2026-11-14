@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { FALLBACK_IMAGE, formatPKR } from "@/lib/format";
 import { Star } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export function SmartImage({
   src,
@@ -17,6 +17,9 @@ export function SmartImage({
   sizes?: string;
 }) {
   const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
   return (
     <img
       src={!src || failed ? FALLBACK_IMAGE : src}

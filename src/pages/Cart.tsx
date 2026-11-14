@@ -128,7 +128,7 @@ export default function Cart() {
               <div key={key} className="flex gap-4 py-5">
                 <Link
                   to={`/product/${item.slug}`}
-                  className="block h-28 w-22 shrink-0 overflow-hidden bg-[#f3ece1] sm:h-32 sm:w-24"
+                  className="block h-28 w-20 shrink-0 overflow-hidden bg-[#f3ece1] sm:h-32 sm:w-24"
                 >
                   <SmartImage src={item.image} alt={item.name} sizes="96px" />
                 </Link>
@@ -170,7 +170,13 @@ export default function Cart() {
                           }
                           className="h-8 border border-border bg-card px-2 text-[11px] uppercase tracking-[0.1em] outline-none focus:border-gold"
                         >
-                          {item.availableSizes.map((size) => (
+                          {[
+                            ...(item.availableSizes ?? []),
+                            ...(item.size &&
+                            !(item.availableSizes ?? []).includes(item.size)
+                              ? [item.size]
+                              : []),
+                          ].map((size) => (
                             <option key={size} value={size}>
                               {size}
                             </option>

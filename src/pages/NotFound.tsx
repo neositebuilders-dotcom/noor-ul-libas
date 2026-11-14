@@ -1,26 +1,29 @@
-import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { usePageMeta } from "@/lib/seo";
+import { Link } from "react-router";
 
 export default function NotFound() {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="min-h-screen flex flex-col"
-    >
+  usePageMeta({
+    title: "Page not found — Noor ul Libas",
+    description: "The page you were looking for could not be found.",
+  });
 
-      
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="max-w-5xl mx-auto relative px-4">
-          <div className="flex items-center justify-center min-h-[200px]">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-              <p className="text-lg text-gray-600">Page Not Found</p>
-            </div>
-          </div>
-        </div>
+  return (
+    <div className="container-editorial flex min-h-[60vh] flex-col items-center justify-center py-20 text-center">
+      <p className="eyebrow">404</p>
+      <h1 className="mt-4 text-5xl leading-tight">This page has moved on</h1>
+      <p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground">
+        The page you were looking for is not here. The collection, however, is only a
+        click away.
+      </p>
+      <div className="mt-7 flex flex-wrap justify-center gap-3">
+        <Button asChild className="h-11 rounded-sm px-6 text-[10px] uppercase tracking-[0.18em]">
+          <Link to="/shop">Shop the collection</Link>
+        </Button>
+        <Button asChild variant="outline" className="h-11 rounded-sm px-6 text-[10px] uppercase tracking-[0.18em]">
+          <Link to="/">Back to home</Link>
+        </Button>
       </div>
-    </motion.div>
+    </div>
   );
 }

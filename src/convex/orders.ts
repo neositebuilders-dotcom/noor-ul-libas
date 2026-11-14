@@ -110,9 +110,13 @@ export const create = mutation({
       if (
         product.sizes.length > 0 &&
         line.size &&
+        line.size !== "Custom" &&
         !product.sizes.includes(line.size)
       ) {
         throw new Error(`Size ${line.size} is not available for ${product.name}.`);
+      }
+      if (line.size === "Custom" && !settings.customSizeEnabled) {
+        throw new Error("Custom sizing is not available at the moment.");
       }
       const price =
         product.salePrice && product.salePrice < product.price
@@ -140,6 +144,7 @@ export const create = mutation({
 
     let discount = 0;
     let couponCode: string | undefined;
+    let couponToIncrement: Doc<"coupons"> | undefined;
     const rawCode = args.couponCode?.trim().toUpperCase();
     if (rawCode) {
       const coupon = await ctx.db
@@ -151,7 +156,7 @@ export const create = mutation({
       if (result.discount <= 0) throw new Error(result.message);
       discount = result.discount;
       couponCode = coupon.code;
-      await ctx.db.patch(coupon._id, { usedCount: coupon.usedCount + 1 });
+      couponToIncrement = coupon;
     }
 
     const shipping =
@@ -190,6 +195,12 @@ export const create = mutation({
       await ctx.db.patch(product._id, {
         stock: Math.max(0, product.stock - line.quantity),
         salesCount: product.salesCount + line.quantity,
+      });
+    }
+
+    if (couponToIncrement) {
+      await ctx.db.patch(couponToIncrement._id, {
+        usedCount: couponToIncrement.usedCount + 1,
       });
     }
 

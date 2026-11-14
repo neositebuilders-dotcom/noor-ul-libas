@@ -265,9 +265,9 @@ export default function Home() {
 
   const slides =
     slideRows && slideRows.length > 0 ? slideRows : FALLBACK_SLIDES;
-  const featuredProducts = featured?.items ?? [];
-
   const categoryTiles = categories ?? [];
+  const instagramHandle =
+    settings?.instagram?.replace(/\/+$/, "").split("/").pop() || "noorullibas";
 
   return (
     <div>
@@ -316,15 +316,19 @@ export default function Home() {
                   )}
                 />
               ))
-            : categoryTiles.map((category, index) => (
+            : categoryTiles.map((category, index) => {
+                const wide =
+                  index < 2 ||
+                  (categoryTiles.length >= 8 && index >= categoryTiles.length - 2);
+                return (
                 <Link
                   key={category._id}
                   to={`/category/${category.slug}`}
                   className={cn(
                     "group relative overflow-hidden bg-[#f3ece1]",
-                    index === 0 && "lg:col-span-2",
-                    index === 1 && "lg:col-span-2",
-                    index < 2 ? "col-span-2 aspect-[16/10]" : "aspect-[3/4]",
+                    wide
+                      ? "col-span-2 aspect-[16/10] lg:col-span-2"
+                      : "aspect-[3/4]",
                   )}
                 >
                   <SmartImage
@@ -348,7 +352,8 @@ export default function Home() {
                     </span>
                   </div>
                 </Link>
-              ))}
+                );
+              })}
         </div>
       </section>
 
@@ -369,10 +374,24 @@ export default function Home() {
             }
           />
           <div className="mt-9">
-            {featured && featured.items.length > 0 ? (
-              <ProductRow products={featured.items} loading={false} />
+            {featured === undefined ? (
+              <ProductRow products={[]} loading />
+            ) : featured.items.length === 0 ? (
+              <div className="border border-dashed border-border px-6 py-12 text-center">
+                <p className="font-display text-2xl">Featured pieces coming soon</p>
+                <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+                  The featured edit is being updated. Browse everything currently in
+                  the studio in the meantime.
+                </p>
+                <Button
+                  asChild
+                  className="mt-5 h-10 rounded-sm px-5 text-[10px] uppercase tracking-[0.16em]"
+                >
+                  <Link to="/shop">Shop all pieces</Link>
+                </Button>
+              </div>
             ) : (
-              <ProductRow products={featuredProducts} loading={featured === undefined} />
+              <ProductRow products={featured.items} loading={false} />
             )}
           </div>
         </div>
@@ -569,7 +588,7 @@ export default function Home() {
           <div className="container-editorial">
             <div className="flex flex-col items-center text-center">
               <Instagram className="size-5 text-gold" />
-              <h2 className="mt-3 text-3xl">@noorullibas</h2>
+              <h2 className="mt-3 text-3xl">@{instagramHandle}</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Studio notes, new drops and styling from our customers.
               </p>

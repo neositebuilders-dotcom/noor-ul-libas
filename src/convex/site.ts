@@ -149,6 +149,8 @@ export const saveSlide = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    if (!args.heading.trim()) throw new Error("Slide heading is required.");
+    if (!args.image.trim()) throw new Error("Slide image is required.");
     const { id, startsAt, endsAt, ...fields } = args;
     const payload = {
       ...fields,
@@ -214,6 +216,7 @@ export const saveAnnouncement = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    if (!args.message.trim()) throw new Error("Announcement text is required.");
     const { id, ...fields } = args;
     if (id) {
       await ctx.db.patch(id, fields);

@@ -1,19 +1,89 @@
 import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
+import { SiteLayout } from "@/components/site/SiteLayout";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 
 // Lazy load route components for better code splitting
-const Landing = lazy(() => import("./pages/Landing.tsx"));
+const Home = lazy(() => import("./pages/Home.tsx"));
+const Shop = lazy(() => import("./pages/Shop.tsx"));
+const Product = lazy(() => import("./pages/Product.tsx"));
+const Cart = lazy(() => import("./pages/Cart.tsx"));
+const Wishlist = lazy(() => import("./pages/Wishlist.tsx"));
+const Checkout = lazy(() => import("./pages/Checkout.tsx"));
+const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
+const TrackOrder = lazy(() => import("./pages/TrackOrder.tsx"));
+const Account = lazy(() => import("./pages/Account.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
+const Admin = lazy(() => import("./pages/Admin.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+
+const ShopPages = lazy(() =>
+  import("./pages/Shop.tsx").then((module) => ({
+    default: module.CategoryPage,
+  })),
+);
+const CollectionPages = lazy(() =>
+  import("./pages/Shop.tsx").then((module) => ({
+    default: module.CollectionPage,
+  })),
+);
+const NewArrivals = lazy(() =>
+  import("./pages/Shop.tsx").then((module) => ({
+    default: module.NewArrivalsPage,
+  })),
+);
+const BestSellers = lazy(() =>
+  import("./pages/Shop.tsx").then((module) => ({
+    default: module.BestSellersPage,
+  })),
+);
+const Sale = lazy(() =>
+  import("./pages/Shop.tsx").then((module) => ({
+    default: module.SalePage,
+  })),
+);
+const ContentPages = lazy(() =>
+  import("./pages/Content.tsx").then((module) => ({
+    default: module.AboutPage,
+  })),
+);
+const ContactPage = lazy(() =>
+  import("./pages/Content.tsx").then((module) => ({
+    default: module.ContactPage,
+  })),
+);
+const FaqsPage = lazy(() =>
+  import("./pages/Content.tsx").then((module) => ({
+    default: module.FaqsPage,
+  })),
+);
+const PolicyShipping = lazy(() =>
+  import("./pages/Content.tsx").then((module) => ({
+    default: () => <module.PolicyPage kind="shipping" />,
+  })),
+);
+const PolicyReturns = lazy(() =>
+  import("./pages/Content.tsx").then((module) => ({
+    default: () => <module.PolicyPage kind="returns" />,
+  })),
+);
+const PolicyPrivacy = lazy(() =>
+  import("./pages/Content.tsx").then((module) => ({
+    default: () => <module.PolicyPage kind="privacy" />,
+  })),
+);
+const PolicyTerms = lazy(() =>
+  import("./pages/Content.tsx").then((module) => ({
+    default: () => <module.PolicyPage kind="terms" />,
+  })),
+);
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
@@ -82,8 +152,6 @@ class RootErrorBoundary extends React.Component<
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
-
-
 function RouteSyncer() {
   const location = useLocation();
   useEffect(() => {
@@ -107,7 +175,6 @@ function RouteSyncer() {
   return null;
 }
 
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
@@ -119,24 +186,62 @@ createRoot(document.getElementById("root")!).render(
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route element={<SiteLayout />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/new-arrivals" element={<NewArrivals />} />
+                <Route path="/best-sellers" element={<BestSellers />} />
+                <Route path="/sale" element={<Sale />} />
+                <Route path="/collections/:slug" element={<CollectionPages />} />
+                <Route path="/category/:slug" element={<ShopPages />} />
+                <Route path="/product/:slug" element={<Product />} />
+                <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/order/:orderNumber" element={<OrderConfirmation />} />
+                <Route path="/track-order" element={<TrackOrder />} />
+                <Route
+                  path="/account"
+                  element={
+                    <RequireAuth
+                      redirectImmediately
+                      title="Sign in to your account"
+                      description="Your orders, details and saved pieces live here."
+                    >
+                      <Account />
+                    </RequireAuth>
+                  }
+                />
+                <Route path="/dashboard" element={<Navigate to="/account" replace />} />
+                <Route path="/about" element={<ContentPages />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/faqs" element={<FaqsPage />} />
+                <Route path="/shipping" element={<PolicyShipping />} />
+                <Route path="/returns" element={<PolicyReturns />} />
+                <Route path="/privacy" element={<PolicyPrivacy />} />
+                <Route path="/terms" element={<PolicyTerms />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
               <Route
                 path="/auth"
-                element={<AuthPage redirectAfterAuth="/dashboard" />}
+                element={<AuthPage redirectAfterAuth="/account" />}
               />
               <Route
-                path="/dashboard"
+                path="/admin"
                 element={
-                  <RequireAuth>
-                    <Dashboard />
+                  <RequireAuth
+                    redirectImmediately
+                    title="Sign in to manage your store"
+                    description="The dashboard is restricted to store administrators."
+                  >
+                    <Admin />
                   </RequireAuth>
                 }
               />
-              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          <Toaster />
         </BrowserRouter>
-        <Toaster />
       </ConvexAuthProvider>
     </RootErrorBoundary>
   </StrictMode>,

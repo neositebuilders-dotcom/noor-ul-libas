@@ -1,11 +1,11 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
+  "name": "Noor ul Libas",
+  "short_name": "Noor ul Libas",
+  "description": "Pakistani women's clothing — unstitched and ready-to-wear lawn, cotton, chiffon and organza suits.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#FFFCF8",
+  "theme_color": "#F8F0E5",
   "icons": [
     {
       "src": "/logo.svg",

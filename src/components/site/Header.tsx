@@ -117,7 +117,7 @@ export function Header({ announcementMessages }: { announcementMessages: string[
       <AnnouncementBar messages={announcementMessages} />
       <div className="border-b border-border/70 bg-background/95 backdrop-blur-md">
         <div className="container-editorial flex h-16 items-center justify-between gap-3 lg:h-20">
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className="flex items-center gap-2 xl:hidden">
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
@@ -133,7 +133,7 @@ export function Header({ announcementMessages }: { announcementMessages: string[
             className="group flex shrink-0 flex-col items-center lg:items-start"
             aria-label="Noor ul Libas — home"
           >
-            <span className="font-display text-[1.35rem] leading-none tracking-[0.16em] text-espresso sm:text-[1.55rem]">
+            <span className="font-display text-[1.12rem] leading-none tracking-[0.13em] text-espresso sm:text-[1.45rem] sm:tracking-[0.16em]">
               NOOR UL LIBAS
             </span>
             <span className="mt-1 hidden text-[7.5px] uppercase tracking-[0.42em] text-gold sm:block">
@@ -141,7 +141,7 @@ export function Header({ announcementMessages }: { announcementMessages: string[
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-5 xl:gap-7 lg:flex">
+          <nav className="hidden items-center gap-5 xl:flex xl:gap-7">
             {mainNav.map((item) => (
               <div
                 key={item.label}
@@ -231,7 +231,7 @@ export function Header({ announcementMessages }: { announcementMessages: string[
             <Link
               to="/wishlist"
               aria-label="Wishlist"
-              className="relative flex size-9 items-center justify-center text-espresso/80 transition-colors hover:text-gold"
+              className="relative hidden size-9 items-center justify-center text-espresso/80 transition-colors hover:text-gold sm:flex"
             >
               <Heart className="size-[18px]" />
               {wishlistCount > 0 && (
@@ -299,8 +299,11 @@ export function Header({ announcementMessages }: { announcementMessages: string[
               </Button>
               <Button asChild variant="ghost" className="h-11 rounded-sm">
                 <Link to={isAuthenticated ? "/account" : "/auth?returnTo=%2Faccount"}>
-                  {isAuthenticated ? "My account" : "Sign in"}
+                  {isAuthenticated ? "My account" : "Sign in / create account"}
                 </Link>
+              </Button>
+              <Button asChild variant="ghost" className="h-11 rounded-sm">
+                <Link to="/wishlist">Wishlist ({wishlistCount})</Link>
               </Button>
             </div>
           </div>

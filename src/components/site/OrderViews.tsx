@@ -97,6 +97,7 @@ export function OrderDetailCard({
 }: {
   order: {
     orderNumber: string;
+    status: string;
     customerName: string;
     phone: string;
     email: string;

@@ -139,18 +139,23 @@ export function ProductListing({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchDraft, setSearchDraft] = useState(searchParams.get("q") ?? "");
 
-  const activeCategory = fixedCategory ?? searchParams.get("category") ?? undefined;
-  const sort = searchParams.get("sort") ?? "newest";
-  const productType = searchParams.get("type") ?? undefined;
-  const pieceCount = searchParams.get("pieces")
-    ? Number(searchParams.get("pieces"))
-    : undefined;
-  const minPrice = searchParams.get("min")
-    ? Number(searchParams.get("min"))
-    : undefined;
-  const maxPrice = searchParams.get("max")
-    ? Number(searchParams.get("max"))
-    : undefined;
+  const categoryParam = searchParams.get("category") ?? undefined;
+  const activeCategory = categoryParam ?? fixedCategory;
+  const displaySlug = activeCategory;
+  const SORTS = ["newest", "price-asc", "price-desc", "popular", "name"] as const;
+  const rawSort = searchParams.get("sort") ?? "newest";
+  const sort = (SORTS as readonly string[]).includes(rawSort)
+    ? (rawSort as (typeof SORTS)[number])
+    : "newest";
+  const rawType = searchParams.get("type");
+  const productType: "stitched" | "unstitched" | undefined =
+    rawType === "stitched" || rawType === "unstitched" ? rawType : undefined;
+  const rawPieces = Number(searchParams.get("pieces"));
+  const pieceCount = [1, 2, 3, 4].includes(rawPieces) ? rawPieces : undefined;
+  const rawMin = Number(searchParams.get("min"));
+  const rawMax = Number(searchParams.get("max"));
+  const minPrice = Number.isFinite(rawMin) && rawMin > 0 ? rawMin : undefined;
+  const maxPrice = Number.isFinite(rawMax) && rawMax > 0 ? rawMax : undefined;
   const inStockOnly = searchParams.get("stock") === "1";
   const onSaleOnly = searchParams.get("sale") === "1";
   const search = searchParams.get("q") ?? undefined;
@@ -164,14 +169,14 @@ export function ProductListing({
     () => ({
       ...(search ? { search } : {}),
       ...(activeCategory ? { category: activeCategory } : {}),
-      ...(productType ? { productType: productType as "stitched" | "unstitched" } : {}),
+      ...(productType ? { productType } : {}),
       ...(pieceCount ? { pieceCount } : {}),
       ...(minPrice !== undefined ? { minPrice } : {}),
       ...(maxPrice !== undefined ? { maxPrice } : {}),
       ...(fabric ? { fabric } : {}),
       ...(inStockOnly ? { inStockOnly: true } : {}),
       ...(onSaleOnly ? { onSaleOnly: true } : {}),
-      sort: sort as "newest" | "price-asc" | "price-desc" | "popular" | "name",
+      sort,
       limit: 60,
     }),
     [
@@ -190,8 +195,8 @@ export function ProductListing({
 
   const result = useQuery(api.products.list, args);
   const products = result?.items ?? [];
-  const decor = COLLECTION_COPY[activeCategory ?? ""] ?? null;
-  const category = categories?.find((row) => row.slug === activeCategory);
+  const decor = COLLECTION_COPY[displaySlug ?? ""] ?? null;
+  const category = categories?.find((row) => row.slug === displaySlug);
   const pageTitle = title ?? category?.name ?? decor?.title ?? "Shop All";
   const pageEyebrow = eyebrow ?? decor?.eyebrow ?? "The collection";
   const pageDescription =
@@ -217,9 +222,10 @@ export function ProductListing({
 
   const activeChips: { label: string; clear: () => void }[] = [];
   if (search) activeChips.push({ label: `“${search}”`, clear: () => updateParam("q") });
-  if (activeCategory && !fixedCategory)
+  if (categoryParam)
     activeChips.push({
-      label: category?.name ?? activeCategory,
+      label:
+        categories?.find((row) => row.slug === categoryParam)?.name ?? categoryParam,
       clear: () => updateParam("category"),
     });
   if (productType)
@@ -613,13 +619,37 @@ export function CollectionPage() {
 }
 
 export function NewArrivalsPage() {
-  return <ProductListing fixedCategory="new-arrivals" />;
+  const copy = COLLECTION_COPY["new-arrivals"];
+  return (
+    <ProductListing
+      fixedCategory="new-arrivals"
+      title={copy.title}
+      eyebrow={copy.eyebrow}
+      description={copy.description}
+    />
+  );
 }
 
 export function BestSellersPage() {
-  return <ProductListing fixedCategory="best-sellers" />;
+  const copy = COLLECTION_COPY["best-sellers"];
+  return (
+    <ProductListing
+      fixedCategory="best-sellers"
+      title={copy.title}
+      eyebrow={copy.eyebrow}
+      description={copy.description}
+    />
+  );
 }
 
 export function SalePage() {
-  return <ProductListing fixedCategory="sale" />;
+  const copy = COLLECTION_COPY.sale;
+  return (
+    <ProductListing
+      fixedCategory="sale"
+      title={copy.title}
+      eyebrow={copy.eyebrow}
+      description={copy.description}
+    />
+  );
 }
