@@ -6,6 +6,7 @@ import {
   InventoryPanel,
   MessagesPanel,
   SettingsPanel,
+  TeamPanel,
 } from "@/components/admin/PeoplePanels";
 import { ProductsPanel } from "@/components/admin/ProductsPanel";
 import { Panel, StatCard } from "@/components/admin/shared";
@@ -40,6 +41,7 @@ import {
   Menu,
   Package,
   Settings,
+  ShieldCheck,
   ShoppingCart,
   Star,
   Store,
@@ -71,6 +73,7 @@ type Section =
   | "homepage"
   | "coupons"
   | "customers"
+  | "team"
   | "reviews"
   | "inventory"
   | "reports"
@@ -85,6 +88,7 @@ const NAV: { key: Section; label: string; icon: React.ComponentType<{ className?
   { key: "homepage", label: "Homepage", icon: ImageIcon },
   { key: "coupons", label: "Coupons", icon: Tag },
   { key: "customers", label: "Customers", icon: Users },
+  { key: "team", label: "Team", icon: ShieldCheck },
   { key: "reviews", label: "Reviews", icon: Star },
   { key: "inventory", label: "Inventory", icon: Box },
   { key: "reports", label: "Reports", icon: BarChart3 },
@@ -103,6 +107,7 @@ const TITLES: Record<Section, { title: string; subtitle: string }> = {
   homepage: { title: "Homepage", subtitle: "Slides, banners and social content." },
   coupons: { title: "Coupons", subtitle: "Discount codes and promotions." },
   customers: { title: "Customers", subtitle: "Order history and lifetime value." },
+  team: { title: "Team", subtitle: "Administrator access for your store." },
   reviews: { title: "Reviews", subtitle: "Moderate customer feedback." },
   inventory: { title: "Inventory", subtitle: "Stock levels and adjustments." },
   reports: { title: "Reports", subtitle: "Sales, categories and products." },
@@ -902,7 +907,8 @@ function AdminShell() {
           {section === "categories" && <CategoriesPanel />}
           {section === "homepage" && <HomepagePanel />}
           {section === "coupons" && <CouponsPanel />}
-          {section === "customers" && <CustomersPanel />}
+                        {section === "customers" && <CustomersPanel />}
+              {section === "team" && <TeamPanel />}
           {section === "reviews" && <ReviewsPanel />}
           {section === "inventory" && <InventoryPanel />}
           {section === "reports" && <Reports />}

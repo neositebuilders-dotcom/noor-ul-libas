@@ -23,6 +23,7 @@ import {
   MessageCircle,
   Plus,
   Search,
+  ShieldCheck,
   Trash2,
   X,
 } from "lucide-react";
@@ -875,6 +876,151 @@ export function SettingsPanel() {
             {saving && <Loader2 className="size-3.5 animate-spin" />} Save settings
           </Button>
         </div>
+      </Panel>
+    </div>
+  );
+}
+
+export function TeamPanel() {
+  const team = useQuery(api.admin.team);
+  const setAdminRole = useMutation(api.admin.setAdminRole);
+  const [search, setSearch] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const query = search.trim().toLowerCase();
+  const members = (team ?? []).filter((member) =>
+    query
+      ? `${member.name ?? ""} ${member.email}`.toLowerCase().includes(query)
+      : true,
+  );
+
+  const toggle = async (userId: Id<"users">, makeAdmin: boolean) => {
+    setBusy(userId);
+    try {
+      await setAdminRole({ userId, makeAdmin });
+      toast.success(
+        makeAdmin
+          ? "Administrator access granted. They can open /admin after signing in."
+          : "Administrator access removed.",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not update access.",
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <Panel
+        title="Administrator access"
+        description="Promote a registered account to administrator. Admins can manage products, orders, homepage content and settings. The person must sign in once at /auth with the email you want to promote."
+      >
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by name or email"
+            className="field h-9 pl-9 text-xs"
+          />
+        </div>
+
+        {team === undefined ? (
+          <div className="flex justify-center py-10">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-y border-border/70 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
+                <tr>
+                  <th className="py-2 pr-3 font-semibold">Account</th>
+                  <th className="py-2 pr-3 font-semibold">Joined</th>
+                  <th className="py-2 pr-3 font-semibold">Role</th>
+                  <th className="py-2 text-right font-semibold">Access</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {members.map((member) => {
+                  const isAdmin = member.role === "admin";
+                  return (
+                    <tr key={member._id}>
+                      <td className="py-3 pr-3">
+                        <p className="font-medium text-espresso">
+                          {member.name ?? member.email.split("@")[0]}
+                          {member.isSelf && (
+                            <span className="ml-2 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
+                              You
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {member.email}
+                        </p>
+                      </td>
+                      <td className="py-3 pr-3 text-muted-foreground">
+                        {formatDate(member.createdAt)}
+                      </td>
+                      <td className="py-3 pr-3">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em]",
+                            isAdmin
+                              ? "bg-gold/15 text-gold"
+                              : "bg-secondary text-muted-foreground",
+                          )}
+                        >
+                          {isAdmin && <ShieldCheck className="size-3" />}
+                          {isAdmin ? "Admin" : "Customer"}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        {member.isSelf ? (
+                          <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                            Current account
+                          </span>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={isAdmin ? "outline" : "default"}
+                            disabled={busy === member._id}
+                            onClick={() => toggle(member._id, !isAdmin)}
+                            className="h-8 rounded-sm px-3 text-[10px] uppercase tracking-[0.12em]"
+                          >
+                            {busy === member._id && (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            )}
+                            {isAdmin ? "Remove admin" : "Make admin"}
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {members.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="py-8 text-center text-muted-foreground"
+                    >
+                      {team.length === 0
+                        ? "No registered accounts yet. Ask your teammate to sign in at /auth first, then promote them here."
+                        : "No accounts match that search."}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="mt-4 text-[11px] leading-5 text-muted-foreground">
+          New admins sign in with their own email at <span className="text-espresso">/auth</span> and open{" "}
+          <span className="text-espresso">/admin</span>. You cannot change your own role — another admin must do it.
+        </p>
       </Panel>
     </div>
   );

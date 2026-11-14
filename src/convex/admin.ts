@@ -41,6 +41,58 @@ export const claimAdmin = mutation({
   },
 });
 
+export const team = query({
+  args: {},
+  handler: async (ctx) => {
+    const actor = await requireAdmin(ctx);
+    const users = await ctx.db.query("users").collect();
+    return users
+      .filter((user) => Boolean(user.email) && !user.isAnonymous)
+      .map((user) => ({
+        _id: user._id,
+        name: user.name ?? null,
+        email: user.email ?? "",
+        role: user.role ?? "user",
+        createdAt: user._creationTime,
+        isSelf: user._id === actor._id,
+      }))
+      .sort((a, b) => {
+        if (a.role === "admin" && b.role !== "admin") return -1;
+        if (b.role === "admin" && a.role !== "admin") return 1;
+        return a.email.localeCompare(b.email);
+      });
+  },
+});
+
+export const setAdminRole = mutation({
+  args: { userId: v.id("users"), makeAdmin: v.boolean() },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx);
+    const target = await ctx.db.get(args.userId);
+    if (!target) throw new Error("That account no longer exists.");
+    if (target._id === actor._id) {
+      throw new Error(
+        "You cannot change your own access. Ask another administrator to do it.",
+      );
+    }
+    if (target.isAnonymous || !target.email) {
+      throw new Error("The account must sign in with an email address first.");
+    }
+    const alreadyAdmin = target.role === "admin";
+    if (alreadyAdmin === args.makeAdmin) return null;
+    if (!args.makeAdmin) {
+      const admins = (await ctx.db.query("users").collect()).filter(
+        (user) => user.role === "admin",
+      );
+      if (admins.length <= 1) {
+        throw new Error("At least one administrator must keep access.");
+      }
+    }
+    await ctx.db.patch(target._id, { role: args.makeAdmin ? "admin" : "user" });
+    return null;
+  },
+});
+
 const DAY = 24 * 60 * 60 * 1000;
 
 export const dashboard = query({
