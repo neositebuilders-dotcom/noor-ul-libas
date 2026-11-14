@@ -5,10 +5,64 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
-import React, { StrictMode, useEffect, lazy, Suspense } from "react";
+import React, { StrictMode, useEffect, lazy as reactLazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import "./index.css";
+
+/* ------------------------------------------------------------------ *
+ * Stale-chunk recovery
+ *
+ * After a new deployment the old hashed chunk files are gone, so a tab
+ * still holding an older index.html (or a flaky network request) fails
+ * with "Failed to fetch dynamically imported module". Instead of showing
+ * a crash screen we retry once and then hard-reload once so the browser
+ * picks up the current asset names.
+ * ------------------------------------------------------------------ */
+const RELOAD_STAMP_KEY = "noor:chunk-reload-at";
+const RELOAD_COOLDOWN_MS = 15_000;
+
+function reloadForFreshAssets() {
+  try {
+    const last = Number(sessionStorage.getItem(RELOAD_STAMP_KEY) ?? 0);
+    if (Date.now() - last < RELOAD_COOLDOWN_MS) return false;
+    sessionStorage.setItem(RELOAD_STAMP_KEY, String(Date.now()));
+  } catch {
+    // Storage can be unavailable; a reload is still the right recovery.
+  }
+  window.location.reload();
+  return true;
+}
+
+// Vite fires this when a module preload fails (e.g. a removed chunk).
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  reloadForFreshAssets();
+});
+
+/** Drop-in `lazy` that survives stale deployments and one-off network blips. */
+function lazy<T extends React.ComponentType<any>>(
+  loader: () => Promise<{ default: T }>,
+) {
+  return reactLazy(async () => {
+    try {
+      const module = await loader();
+      try {
+        sessionStorage.removeItem(RELOAD_STAMP_KEY);
+      } catch {
+        // ignore
+      }
+      return module;
+    } catch {
+      try {
+        return await loader();
+      } catch {
+        reloadForFreshAssets();
+        return await loader();
+      }
+    }
+  });
+}
 
 // Lazy load route components for better code splitting
 const Home = lazy(() => import("./pages/Home.tsx"));
@@ -137,6 +191,13 @@ class RootErrorBoundary extends React.Component<
             <p className="mt-2 text-xs text-muted-foreground break-words">
               {this.state.message}
             </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-sm border border-border px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] hover:bg-muted"
+            >
+              Reload page
+            </button>
             {this.state.stack && (
               <pre className="mt-3 text-left text-[10px] leading-4 text-muted-foreground/80 max-h-40 overflow-auto rounded border border-border/60 p-2">
                 {this.state.stack}
