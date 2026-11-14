@@ -5,7 +5,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
-import React, { StrictMode, useEffect, lazy as reactLazy, Suspense } from "react";
+import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import "./index.css";
@@ -15,9 +15,9 @@ import "./index.css";
  *
  * After a new deployment the old hashed chunk files are gone, so a tab
  * still holding an older index.html (or a flaky network request) fails
- * with "Failed to fetch dynamically imported module". Instead of showing
- * a crash screen we retry once and then hard-reload once so the browser
- * picks up the current asset names.
+ * with "Failed to fetch dynamically imported module". Vite reports that as a
+ * `vite:preloadError`; we reload once so the browser picks up the current
+ * asset names instead of dead-ending on the crash screen.
  * ------------------------------------------------------------------ */
 const RELOAD_STAMP_KEY = "noor:chunk-reload-at";
 const RELOAD_COOLDOWN_MS = 15_000;
@@ -34,35 +34,11 @@ function reloadForFreshAssets() {
   return true;
 }
 
-// Vite fires this when a module preload fails (e.g. a removed chunk).
+// Vite fires this when a dynamic import fails to load (e.g. a removed chunk).
 window.addEventListener("vite:preloadError", (event) => {
   event.preventDefault();
   reloadForFreshAssets();
 });
-
-/** Drop-in `lazy` that survives stale deployments and one-off network blips. */
-function lazy<T extends React.ComponentType<any>>(
-  loader: () => Promise<{ default: T }>,
-) {
-  return reactLazy(async () => {
-    try {
-      const module = await loader();
-      try {
-        sessionStorage.removeItem(RELOAD_STAMP_KEY);
-      } catch {
-        // ignore
-      }
-      return module;
-    } catch {
-      try {
-        return await loader();
-      } catch {
-        reloadForFreshAssets();
-        return await loader();
-      }
-    }
-  });
-}
 
 // Lazy load route components for better code splitting
 const Home = lazy(() => import("./pages/Home.tsx"));
