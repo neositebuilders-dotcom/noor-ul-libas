@@ -185,6 +185,34 @@ export const setAdminRole = mutation({
   },
 });
 
+export const counts = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const [orders, products, messages] = await Promise.all([
+      ctx.db.query("orders").collect(),
+      ctx.db.query("products").collect(),
+      ctx.db.query("messages").collect(),
+    ]);
+    const pendingStatuses: Doc<"orders">["status"][] = [
+      "new",
+      "confirmed",
+      "processing",
+      "packed",
+    ];
+    return {
+      pendingOrders: orders.filter((order) =>
+        pendingStatuses.includes(order.status),
+      ).length,
+      lowStock: products.filter(
+        (product) =>
+          product.stock > 0 && product.stock <= (product.lowStockThreshold ?? 5),
+      ).length,
+      unreadMessages: messages.filter((message) => !message.isRead).length,
+    };
+  },
+});
+
 const DAY = 24 * 60 * 60 * 1000;
 
 export const dashboard = query({
