@@ -29,75 +29,9 @@ import {
   Tag,
   Users,
 } from "lucide-react";
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
-
-const Overview = lazy(() =>
-  import("@/components/admin/OverviewPanel").then((module) => ({
-    default: module.Overview,
-  })),
-);
-const OrdersPanel = lazy(() =>
-  import("@/components/admin/OrdersPanel").then((module) => ({
-    default: module.OrdersPanel,
-  })),
-);
-const ProductsPanel = lazy(() =>
-  import("@/components/admin/ProductsPanel").then((module) => ({
-    default: module.ProductsPanel,
-  })),
-);
-const CategoriesPanel = lazy(() =>
-  import("@/components/admin/CatalogPanels").then((module) => ({
-    default: module.CategoriesPanel,
-  })),
-);
-const CouponsPanel = lazy(() =>
-  import("@/components/admin/CatalogPanels").then((module) => ({
-    default: module.CouponsPanel,
-  })),
-);
-const ReviewsPanel = lazy(() =>
-  import("@/components/admin/CatalogPanels").then((module) => ({
-    default: module.ReviewsPanel,
-  })),
-);
-const HomepagePanel = lazy(() =>
-  import("@/components/admin/HomepagePanel").then((module) => ({
-    default: module.HomepagePanel,
-  })),
-);
-const CustomersPanel = lazy(() =>
-  import("@/components/admin/PeoplePanels").then((module) => ({
-    default: module.CustomersPanel,
-  })),
-);
-const InventoryPanel = lazy(() =>
-  import("@/components/admin/PeoplePanels").then((module) => ({
-    default: module.InventoryPanel,
-  })),
-);
-const MessagesPanel = lazy(() =>
-  import("@/components/admin/PeoplePanels").then((module) => ({
-    default: module.MessagesPanel,
-  })),
-);
-const SettingsPanel = lazy(() =>
-  import("@/components/admin/PeoplePanels").then((module) => ({
-    default: module.SettingsPanel,
-  })),
-);
-const TeamPanel = lazy(() =>
-  import("@/components/admin/PeoplePanels").then((module) => ({
-    default: module.TeamPanel,
-  })),
-);
-const Reports = lazy(() =>
-  import("@/components/admin/ReportsPanel").then((module) => ({
-    default: module.Reports,
-  })),
-);
 
 type Section =
   | "overview"
@@ -114,6 +48,83 @@ type Section =
   | "messages"
   | "settings";
 
+/** Kept separate from the components so a section can be preloaded on hover. */
+const panelLoaders: Record<
+  Section,
+  () => Promise<{ default: React.ComponentType }>
+> = {
+  overview: () =>
+    import("@/components/admin/OverviewPanel").then((module) => ({
+      default: module.Overview,
+    })),
+  orders: () =>
+    import("@/components/admin/OrdersPanel").then((module) => ({
+      default: module.OrdersPanel,
+    })),
+  products: () =>
+    import("@/components/admin/ProductsPanel").then((module) => ({
+      default: module.ProductsPanel,
+    })),
+  categories: () =>
+    import("@/components/admin/CatalogPanels").then((module) => ({
+      default: module.CategoriesPanel,
+    })),
+  homepage: () =>
+    import("@/components/admin/HomepagePanel").then((module) => ({
+      default: module.HomepagePanel,
+    })),
+  coupons: () =>
+    import("@/components/admin/CatalogPanels").then((module) => ({
+      default: module.CouponsPanel,
+    })),
+  customers: () =>
+    import("@/components/admin/PeoplePanels").then((module) => ({
+      default: module.CustomersPanel,
+    })),
+  team: () =>
+    import("@/components/admin/PeoplePanels").then((module) => ({
+      default: module.TeamPanel,
+    })),
+  reviews: () =>
+    import("@/components/admin/CatalogPanels").then((module) => ({
+      default: module.ReviewsPanel,
+    })),
+  inventory: () =>
+    import("@/components/admin/PeoplePanels").then((module) => ({
+      default: module.InventoryPanel,
+    })),
+  reports: () =>
+    import("@/components/admin/ReportsPanel").then((module) => ({
+      default: module.Reports,
+    })),
+  messages: () =>
+    import("@/components/admin/PeoplePanels").then((module) => ({
+      default: module.MessagesPanel,
+    })),
+  settings: () =>
+    import("@/components/admin/PeoplePanels").then((module) => ({
+      default: module.SettingsPanel,
+    })),
+};
+
+const PANELS: Record<
+  Section,
+  React.LazyExoticComponent<React.ComponentType>
+> = {
+  overview: lazy(panelLoaders.overview),
+  orders: lazy(panelLoaders.orders),
+  products: lazy(panelLoaders.products),
+  categories: lazy(panelLoaders.categories),
+  homepage: lazy(panelLoaders.homepage),
+  coupons: lazy(panelLoaders.coupons),
+  customers: lazy(panelLoaders.customers),
+  team: lazy(panelLoaders.team),
+  reviews: lazy(panelLoaders.reviews),
+  inventory: lazy(panelLoaders.inventory),
+  reports: lazy(panelLoaders.reports),
+  messages: lazy(panelLoaders.messages),
+  settings: lazy(panelLoaders.settings),
+};
 const NAV: { key: Section; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
   { key: "orders", label: "Orders", icon: ClipboardList },
@@ -155,6 +166,12 @@ function AdminGate() {
   const acceptInvite = useMutation(api.admin.acceptAdminInvite);
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+
+  // Start downloading the default panel while the access check is still in
+  // flight, instead of only after Convex confirms the account is an admin.
+  useEffect(() => {
+    void panelLoaders.overview();
+  }, []);
 
   if (status === undefined) {
     return (
@@ -245,6 +262,7 @@ function AdminShell() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const counts = useQuery(api.admin.counts);
+  const ActivePanel = PANELS[section];
 
   const badgeFor = (key: Section) => {
     if (key === "orders" && counts?.pendingOrders) return counts.pendingOrders;
@@ -261,6 +279,8 @@ function AdminShell() {
           <button
             key={item.key}
             type="button"
+            onMouseEnter={() => void panelLoaders[item.key]()}
+            onFocus={() => void panelLoaders[item.key]()}
             onClick={() => {
               setSection(item.key);
               setNavOpen(false);
@@ -363,19 +383,7 @@ function AdminShell() {
               </div>
             }
           >
-            {section === "overview" && <Overview />}
-            {section === "orders" && <OrdersPanel />}
-            {section === "products" && <ProductsPanel />}
-            {section === "categories" && <CategoriesPanel />}
-            {section === "homepage" && <HomepagePanel />}
-            {section === "coupons" && <CouponsPanel />}
-            {section === "customers" && <CustomersPanel />}
-            {section === "team" && <TeamPanel />}
-            {section === "reviews" && <ReviewsPanel />}
-            {section === "inventory" && <InventoryPanel />}
-            {section === "reports" && <Reports />}
-            {section === "messages" && <MessagesPanel />}
-            {section === "settings" && <SettingsPanel />}
+            <ActivePanel />
           </Suspense>
         </main>
       </div>

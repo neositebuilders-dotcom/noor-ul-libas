@@ -1,4 +1,3 @@
-import { CategoryBarChart, RevenueChart } from "@/components/admin/OverviewCharts";
 import { Panel, StatCard } from "@/components/admin/shared";
 import { RangeFilter, rangeFor, type Preset } from "@/components/admin/range";
 import { StatusBadge } from "@/components/site/OrderViews";
@@ -16,7 +15,31 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
+
+// recharts is ~390 kB, so the charts load after the numbers are already on
+// screen instead of holding up the whole dashboard.
+const RevenueChart = lazy(() =>
+  import("@/components/admin/OverviewCharts").then((module) => ({
+    default: module.RevenueChart,
+  })),
+);
+const CategoryBarChart = lazy(() =>
+  import("@/components/admin/OverviewCharts").then((module) => ({
+    default: module.CategoryBarChart,
+  })),
+);
+
+function ChartSkeleton({ className }: { className: string }) {
+  return (
+    <div
+      className={cn(
+        "animate-pulse border border-border/60 bg-secondary/40",
+        className,
+      )}
+    />
+  );
+}
 
 export function Overview() {
   const [preset, setPreset] = useState<Preset>("30d");
@@ -109,7 +132,9 @@ export function Overview() {
               title="Sales overview"
               description="Revenue and order volume over the selected period."
             >
-              <RevenueChart series={data.series} />
+              <Suspense fallback={<ChartSkeleton className="h-[260px]" />}>
+                <RevenueChart series={data.series} />
+              </Suspense>
             </Panel>
 
             <Panel title="Best sellers" description="Ranked by units sold.">
@@ -191,7 +216,9 @@ export function Overview() {
 
             <Panel title="Revenue by category" description="Within the selected period.">
               {data.categoryRevenue.length > 0 ? (
-                <CategoryBarChart data={data.categoryRevenue} />
+                <Suspense fallback={<ChartSkeleton className="h-[220px]" />}>
+                  <CategoryBarChart data={data.categoryRevenue} />
+                </Suspense>
               ) : (
                 <p className="text-xs text-muted-foreground">No revenue recorded yet.</p>
               )}
