@@ -11,16 +11,21 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import "./index.css";
 
 /* ------------------------------------------------------------------ *
- * Stale-chunk recovery
+ * Stale-build recovery
  *
- * After a new deployment the old hashed chunk files are gone, so a tab
- * still holding an older index.html (or a flaky network request) fails
- * with "Failed to fetch dynamically imported module". Vite reports that as a
- * `vite:preloadError`; we reload once so the browser picks up the current
- * asset names instead of dead-ending on the crash screen.
+ * After a new deployment the old hashed chunk files are gone, and this host
+ * answers missing asset URLs with index.html instead of a 404. A tab still
+ * holding the previous index.html therefore dies with "Failed to fetch
+ * dynamically imported module". Two guards keep that from showing a crash:
+ *   1. Vite fires `vite:preloadError` when a chunk fails — recover at once.
+ *   2. After boot we compare the document's entry script with the one the
+ *      server currently serves, and recover before a chunk request fails.
+ * Recovery navigates to a cache-busted URL so the browser cannot reuse the
+ * stale document. A cooldown stops a broken deploy from reload-looping.
  * ------------------------------------------------------------------ */
 const RELOAD_STAMP_KEY = "noor:chunk-reload-at";
 const RELOAD_COOLDOWN_MS = 15_000;
+const FRESH_PARAM = "_fresh";
 
 function reloadForFreshAssets() {
   try {
@@ -28,10 +33,27 @@ function reloadForFreshAssets() {
     if (Date.now() - last < RELOAD_COOLDOWN_MS) return false;
     sessionStorage.setItem(RELOAD_STAMP_KEY, String(Date.now()));
   } catch {
-    // Storage can be unavailable; a reload is still the right recovery.
+    // Storage can be unavailable; a fresh navigation is still the right move.
   }
-  window.location.reload();
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set(FRESH_PARAM, String(Date.now()));
+    window.location.replace(url.toString());
+  } catch {
+    window.location.reload();
+  }
   return true;
+}
+
+// The cache-buster only exists to force one clean document fetch.
+try {
+  const url = new URL(window.location.href);
+  if (url.searchParams.has(FRESH_PARAM)) {
+    url.searchParams.delete(FRESH_PARAM);
+    window.history.replaceState(window.history.state, "", url.toString());
+  }
+} catch {
+  // Ignore malformed URLs.
 }
 
 // Vite fires this when a dynamic import fails to load (e.g. a removed chunk).
@@ -39,6 +61,41 @@ window.addEventListener("vite:preloadError", (event) => {
   event.preventDefault();
   reloadForFreshAssets();
 });
+
+function entryScriptPath(html: string) {
+  const match = html.match(/<script[^>]*type="module"[^>]*src="([^"]+)"/i);
+  if (!match?.[1]) return null;
+  return new URL(match[1], window.location.origin).pathname;
+}
+
+/** Detects a document left over from a previous deployment. */
+async function checkForStaleDocument() {
+  const current = document.querySelector<HTMLScriptElement>(
+    'script[type="module"][src]',
+  );
+  if (!current) return;
+
+  try {
+    const response = await fetch(window.location.href, { cache: "no-store" });
+    if (!response.ok) return;
+    const fresh = entryScriptPath(await response.text());
+    if (!fresh) return;
+
+    const loaded = new URL(current.src, window.location.origin).pathname;
+    if (fresh === loaded) {
+      // This document matches the live build, so allow a future recovery.
+      try {
+        sessionStorage.removeItem(RELOAD_STAMP_KEY);
+      } catch {
+        // ignore
+      }
+      return;
+    }
+    reloadForFreshAssets();
+  } catch {
+    // Offline or blocked request — nothing to recover from.
+  }
+}
 
 // Lazy load route components for better code splitting
 const Home = lazy(() => import("./pages/Home.tsx"));
@@ -191,6 +248,14 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
 function RouteSyncer() {
   const location = useLocation();
+
+  useEffect(() => {
+    // Let the first paint finish, then look for a document older than the
+    // running deployment.
+    const timer = window.setTimeout(() => void checkForStaleDocument(), 1500);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     window.parent.postMessage(
       { type: "iframe-route-change", path: location.pathname },
